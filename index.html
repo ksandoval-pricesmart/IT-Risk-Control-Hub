@@ -359,6 +359,282 @@ html,body{height:100%;font-family:var(--sans);background:var(--bg);color:var(--t
       <div class="ipe-content" id="ipe-content"></div>
     </div>
   </div>
-</div>
+</div><script>
+// All code runs after DOM is fully parsed
+document.addEventListener('DOMContentLoaded', function() {
+
+// ─── DATA ──────────────────────────────────────────────────
+const CONTROLS=[
+{id:"IT_App_01.1",name:"User Access Review",freq:"Quarterly",type:"IT Dependent",owner:"IT Risk & Controls",
+description:"On a quarterly basis, IT Risk & Controls facilitates the review of access granted to critical user groups in App to ensure that assigned permissions are aligned with current job responsibilities. The review includes the identification of inappropriate access and accounts associated with transferred or terminated users. All exceptions are documented and evaluated by management for timely remediation.",
+evidence:["App critical users access report","Evidence of the quarterly access review","Documentation of identified exceptions","Evidence of management review and approval","Action plans, if applicable"],
+result:["Validate access alignment with job responsibilities","Identify and document inappropriate access","Manage and remediate exceptions","Confirm management review and approval","Retain evidence"],
+risk:"If access is not reviewed quarterly, transferred or terminated users may retain active permissions, leading to unauthorized access to critical data, internal fraud, or regulatory non-compliance.",
+norms:["ISO 27001 A.9.2.5","COBIT DSS05.04","NIST AC-2"]},
+{id:"IT_App_01.2",name:"Administrative Access Review",freq:"Annual",type:"IT Dependent",owner:"Management",
+description:"On an annual basis, management reviews the appropriateness of users with administrative access in the App production environment, including permissions to add, modify, or delete configurations, tables, and users. Any inappropriate access identified is investigated through a documented lookback analysis to assess impact and associated risk.",
+evidence:["Listing of administrative users","Evidence of the annual access review","Documented lookback analysis, if applicable","Management approval evidence","Documented corrective actions"],
+result:["Confirm authorized administrative access","Identify unauthorized or inappropriate access","Assess impact through lookback analysis","Implement corrective actions","Retain evidence"],
+risk:"Unauthorized administrative access allows modifying configurations, tables, and users without oversight. Without annual review, this risk may go undetected for months.",
+norms:["ISO 27001 A.9.2.3","COBIT DSS05.04","NIST AC-6"]},
+{id:"IT_App_01.3",name:"Semiannual User Access Review (SDLC)",freq:"Semiannual",type:"IT Dependent",owner:"IT Risk & Controls",
+description:"On a semiannual basis, IT Risk & Controls facilitates the review of user access in App as part of the SDLC framework to ensure access remains appropriate based on user responsibilities. Any exceptions identified are documented and evaluated by management.",
+evidence:["Semiannual access review report","Evidence of review performed by IT Risk & Controls","Documentation of exceptions identified","Evidence of management evaluation","Remediation plans, if applicable"],
+result:["Validate continued appropriateness of access","Identify deviations","Document and manage exceptions","Obtain management validation","Retain evidence"],
+risk:"In active SDLC environments, access can change rapidly. Without semiannual review, development roles may accumulate production permissions, violating segregation of duties.",
+norms:["ISO 27001 A.9.2.5","COBIT BAI03.08","NIST AC-2(j)"]},
+{id:"IT_App_01.4",name:"Batch Jobs Monitoring",freq:"Daily",type:"IT Dependent",owner:"IT Support / SRE",
+description:"On a daily basis, critical system jobs and scheduled processes in App are monitored to ensure successful execution. Processing errors, failures, or interruptions are identified, logged, reviewed, investigated, and corrected as needed.",
+evidence:["Job execution logs","Daily monitoring reports","Incident tickets","Evidence of issue resolution","Incident closure documentation"],
+result:["Confirm successful execution of critical processes","Identify and log failures","Resolve incidents timely","Document resolutions","Retain evidence"],
+risk:"An undetected failed batch job can cause incorrect data in production, impact downstream processes, and prevent traceability of critical transactions.",
+norms:["ISO 27001 A.12.1.3","COBIT DSS01.03","NIST SI-6"]},
+{id:"IT_App_01.5",name:"Change Management: Configuration Changes",freq:"Ad hoc",type:"Manual",owner:"Management",
+description:"On an ad hoc basis, management reviews and approves changes to critical configurations within App. All changes are documented through ticketing tools and require appropriate approvals, testing evidence, and validation prior to implementation in production.",
+evidence:["Change management tickets","Management approval evidence","Testing results","Implementation evidence","Change closure documentation"],
+result:["Validate authorized changes","Confirm testing completion","Control production implementations","Maintain traceability","Retain evidence"],
+risk:"Unauthorized configuration changes can introduce production errors, open security vulnerabilities, or cause outages that are difficult to revert.",
+norms:["ISO 27001 A.12.1.2","COBIT BAI06.01","NIST CM-3"]},
+{id:"IT_App_01.6",name:"SDLC Sponsor Approval",freq:"Ad hoc",type:"Manual",owner:"Management",
+description:"On an ad hoc basis, management obtains formal sponsor approval to initiate and complete each phase of the SDLC, including design confirmation, UAT approval, and deployment authorization prior to migrating solutions into production.",
+evidence:["Sponsor approval documentation","Design documentation","UAT evidence","Deployment authorization","Implementation records"],
+result:["Ensure SDLC controls are followed","Validate formal approvals","Confirm successful testing","Authorize production deployment","Retain evidence"],
+risk:"Without sponsor approval per SDLC phase, untested solutions could migrate to production, impacting data integrity, availability, or regulatory compliance.",
+norms:["ISO 27001 A.14.2.2","COBIT BAI03.07","NIST SA-10"]},
+{id:"IT_App_01.7",name:"User Access Deprovisioning",freq:"Ad hoc",type:"Manual",owner:"IT Support / HR",
+description:"On an ad hoc basis, Human Resources submits access removal requests through the ticketing system following user termination or transfer. IT Support revokes all related system access and credentials in accordance with established termination procedures.",
+evidence:["HR access removal request","Deprovisioning ticket","Evidence of access revocation","Confirmation of ticket closure","Compliance records"],
+result:["Remove access in a timely manner","Prevent unauthorized access","Confirm process compliance","Document actions taken","Retain evidence"],
+risk:"Residual access from terminated employees is one of the most frequent audit findings. A gap in HR-IT communication can leave accounts active for weeks.",
+norms:["ISO 27001 A.9.2.6","COBIT DSS05.04","NIST AC-2(j)"]},
+{id:"IT_App_01.8",name:"Password Policy Review",freq:"Annual",type:"IT Dependent",owner:"IT Risk & Controls",
+description:"On an annual basis, the IT Risk & Controls team reviews Active Directory password configurations to ensure compliance with the company password policy. Any deviations are documented along with corrective actions and risk assessments.",
+evidence:["Password policy configuration settings","Evidence of annual review","Documentation of deviations","Risk assessment documentation","Corrective action plans"],
+result:["Validate compliance with password policy","Identify deviations","Assess risks","Execute corrective actions","Retain evidence"],
+risk:"Below-standard password configurations increase the attack surface, facilitating unauthorized access via brute force or credential stuffing.",
+norms:["ISO 27001 A.9.4.3","NIST IA-5","COBIT DSS05.03"]},
+{id:"IT_App_01.9",name:"Interfaces and Backfeed Monitoring",freq:"Ad hoc",type:"IT Dependent",owner:"SRE Team",
+description:"On an ad hoc basis, the SRE team monitors App interfaces and backfeed integrations. Alerts generated for incidents are reviewed and followed up by users or IT personnel, as applicable.",
+evidence:["Interface logs","Generated alerts","Incident tickets","Resolution evidence","Closure confirmation"],
+result:["Validate interface functionality","Detect incidents in a timely manner","Resolve alerts appropriately","Document followup actions","Retain evidence"],
+risk:"Undetected interface failures can cause data loss or duplication across integrated systems, affecting the integrity of business processes.",
+norms:["ISO 27001 A.12.4.1","COBIT DSS01.03","NIST AU-6"]},
+{id:"IT_App_01.10",name:"Privileged Access Review",freq:"Annual",type:"IT Dependent",owner:"Management",
+description:"On an annual basis, management reviews the appropriateness of users with privileged access (Administrators, Domain Admins, Enterprise Admins, and other critical roles). Any inappropriate access identified is evaluated through a documented lookback analysis.",
+evidence:["Privileged access user listing","Evidence of annual review","Lookback analysis documentation, if applicable","Management approval evidence","Remediation plans"],
+result:["Validate privileged access","Identify inappropriate access","Evaluate impact","Implement corrective controls","Retain evidence"],
+risk:"Privileged access represents the highest risk of total environment compromise. Without annual review, accumulated accounts may remain active without business justification.",
+norms:["ISO 27001 A.9.2.3","NIST AC-6(7)","COBIT DSS05.04"]},
+{id:"IT_App_01.11",name:"User Provisioning and Access Modification",freq:"Ad hoc",type:"Manual",owner:"IT Support",
+description:"On an ad hoc basis, IT Support reviews and validates requests for user provisioning or access modification in App. Access is not granted or modified until proper authorization and documented management approval are obtained.",
+evidence:["Access request documentation","Management approval","Implementation evidence","Change records","Closure confirmation"],
+result:["Ensure approvals prior to access changes","Prevent unauthorized access","Document access changes","Maintain traceability","Retain evidence"],
+risk:"Provisioning without documented approval violates the principle of least privilege and can result in excessive access from day one.",
+norms:["ISO 27001 A.9.2.1","COBIT DSS05.04","NIST AC-2(a)"]},
+{id:"IT_App_01.12",name:"Segregation of Duties (SoD) Review",freq:"Annual",type:"IT Dependent",owner:"Management",
+description:"On an annual basis, management reviews the App access matrix to confirm that each position is assigned appropriate roles and access, ensuring proper segregation of duties. Evidence of the review and any updates performed is retained.",
+evidence:["App access matrix","Evidence of annual review","Documentation of changes made","Management approval","Archived evidence"],
+result:["Validate segregation of duties","Identify access conflicts","Correct deviations","Approve results","Retain evidence"],
+risk:"Lack of segregation of duties allows a user to initiate and approve the same transaction, creating conditions for fraud. Critical finding in SOX and ITGC audits.",
+norms:["ISO 27001 A.6.1.2","COBIT DSS05.04","NIST AC-5"]}
+];
+
+const FC={Daily:"bd",Quarterly:"bq",Semiannual:"bs",Annual:"ba","Ad hoc":"bh"};
+
+// ─── GUIDE DATA ─────────────────────────────────────────────
+const GUIDE_SECTIONS=[
+{group:"Introduction",items:[
+{id:"intro",title:"Introduction",tag:"Overview",tagColor:"#4f8ef7",content:`<p>This guide explains in plain language the concepts that appear in controls testing forms and walks you through step by step to perform proper testing.</p><div class="tip"><strong>Key idea:</strong> A control "works" when it is performed on time, by the right person, following the defined process, and there is clear evidence that it happened.</div>`}
+]},
+{group:"Key Concepts",items:[
+{id:"control",title:"Control",tag:"Concept",tagColor:"#34d399",content:`<p>A control is a "rule" or "activity" the company performs to prevent problems.</p><p style="margin-top:8px"><strong>Objectives:</strong></p><ul style="list-style:none;display:flex;flex-direction:column;gap:6px;margin-top:8px"><li style="display:flex;gap:8px;font-size:13px;color:#c8ccd8;font-weight:300"><span style="color:#34d399">→</span>Prevent errors (stop them from happening)</li><li style="display:flex;gap:8px;font-size:13px;color:#c8ccd8;font-weight:300"><span style="color:#fbbf24">→</span>Detect errors (find them quickly)</li><li style="display:flex;gap:8px;font-size:13px;color:#c8ccd8;font-weight:300"><span style="color:#a78bfa">→</span>Correct errors (fix them and prevent recurrence)</li></ul><div class="tip"><strong>As a tester you must understand:</strong> What is done · Why it is done · What happens if it is not done</div>`},
+{id:"wcgw",title:"Risk Description (WCGW)",tag:"Concept",tagColor:"#f87171",content:`<p>WCGW = <strong>What Could Go Wrong.</strong> It explains what could go wrong if the control did not exist or failed.</p><div class="warn">If access is not reviewed, a former employee could retain permissions and make unauthorized changes.</div><p style="margin-top:10px">It helps understand why the control is tested and whether an exception is major or minor.</p>`},
+{id:"freq",title:"Control Frequency",tag:"Concept",tagColor:"#22d3ee",content:`<p>Indicates how often the control should occur.</p><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0">${[["Daily","Every day","#f87171"],["Weekly","Once per week","#fbbf24"],["Monthly","Once per month","#34d399"],["Quarterly","Once per quarter","#22d3ee"],["Semiannual","Twice per year","#a78bfa"],["Annual","Once per year","#34d399"],["Ad hoc","Only when an event occurs","#f472b6"]].map(([f,d,c])=>`<div style="background:var(--s2);border:1px solid var(--b2);border-radius:6px;padding:9px 11px"><div style="font-family:var(--mono);font-size:9px;color:${c};letter-spacing:.08em;margin-bottom:3px">${f}</div><div style="font-size:12px;color:var(--dim);font-weight:300">${d}</div></div>`).join('')}</div><div class="tip"><strong>Simple rule:</strong> If a control is "Quarterly," you should see evidence every quarter. If one is missing, that is a potential exception.</div>`},
+{id:"evidence",title:"Evidence",tag:"Concept",tagColor:"#fbbf24",content:`<p>Evidence is what proves the control was performed.</p><div style="display:flex;flex-direction:column;gap:7px;margin:10px 0">${[["System report (exported)","Complete with visible parameters"],["Ticket (with status and approvals)","Traceable from opening to closure"],["Approval email","With date, sender, and clear content"],["Screenshot","With visible timestamp"],["System log","Automatically generated, non-editable"]].map(([e,d])=>`<div style="display:flex;gap:8px;font-size:13px;color:#c8ccd8;font-weight:300"><span style="color:#fbbf24;flex-shrink:0">▸</span><div><div style="font-weight:500;color:var(--text);font-size:12px">${e}</div><div style="font-size:11px;color:var(--muted)">${d}</div></div></div>`).join('')}</div><div class="example">"If it isn't documented, it doesn't exist."</div>`},
+{id:"sample",title:"Sample vs Population",tag:"Concept",tagColor:"#a78bfa",content:`<p><strong>Population:</strong> the total universe of control instances in the period.</p><p style="margin-top:8px"><strong>Sample:</strong> a portion of the population selected for testing.</p><div style="margin:12px 0;display:grid;grid-template-columns:1fr 1fr;gap:9px"><div style="background:var(--s2);border:1px solid var(--b2);border-radius:7px;padding:11px"><div style="font-family:var(--mono);font-size:9px;color:#a78bfa;letter-spacing:.1em;margin-bottom:5px">EXAMPLE</div><div style="font-size:12px;color:var(--dim);line-height:1.5;font-weight:300">Quarterly control FY2026 → Population: 4 reviews (Q1–Q4)</div></div><div style="background:var(--s2);border:1px solid var(--b2);border-radius:7px;padding:11px"><div style="font-family:var(--mono);font-size:9px;color:#22d3ee;letter-spacing:.1em;margin-bottom:5px">EXAMPLE</div><div style="font-size:12px;color:var(--dim);line-height:1.5;font-weight:300">Ad hoc termination control → Population: all terminations in the period</div></div></div><div class="tip">Your sample must: fall within the period · represent the population · allow you to conclude whether the control operated.</div>`},
+{id:"exception",title:"Exception & Remediation",tag:"Concept",tagColor:"#f87171",content:`<p>An exception occurs when the control was not performed as required.</p><div class="warn"><strong>Common examples:</strong><br>• No evidence · Performed late · No approval · Incomplete report · Undocumented inappropriate access</div><p style="margin-top:10px"><strong>Remediation</strong> is the corrective action taken after detecting an exception.</p><div class="tip"><strong>Important:</strong> Remediation ≠ "fixing the evidence." It must fix the real problem.</div>`},
+{id:"lookback",title:"Lookback Analysis",tag:"Concept",tagColor:"#22d3ee",content:`<p>When something serious is found (e.g., inappropriate access), a lookback is performed to determine whether there was any impact.</p><div class="example">User with admin access without need → review logs/history to see what the user did with that access.</div><p style="margin-top:10px"><strong>Must include:</strong> period reviewed · activities reviewed · conclusion (impact yes/no) · risks and actions.</p>`},
+{id:"sod",title:"Segregation of Duties (SoD)",tag:"Concept",tagColor:"#f472b6",content:`<p>SoD means one person should not be able to do everything in a critical process.</p><div class="warn"><strong>Example:</strong> There should not be someone who creates a vendor AND approves payments.</div><p style="margin-top:10px">Reduces fraud and error risk. Critical finding in SOX and ITGC audits.</p>`},
+{id:"effectiveness",title:"Operating vs Design Effectiveness",tag:"Concept",tagColor:"#34d399",content:`<div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:12px"><div style="background:var(--s2);border:1px solid var(--b2);border-radius:7px;padding:12px"><div style="font-family:var(--mono);font-size:9px;color:#34d399;letter-spacing:.1em;margin-bottom:6px">OPERATING EFFECTIVENESS</div><p style="font-size:13px;color:#c8ccd8;font-weight:300;line-height:1.5">Was the control performed correctly in practice during the period?</p></div><div style="background:var(--s2);border:1px solid var(--b2);border-radius:7px;padding:12px"><div style="font-family:var(--mono);font-size:9px;color:#fbbf24;letter-spacing:.1em;margin-bottom:6px">DESIGN EFFECTIVENESS</div><p style="font-size:13px;color:#c8ccd8;font-weight:300;line-height:1.5">Is the control well designed to mitigate the risk?</p></div></div><div class="tip">A control can be well designed but poorly executed, or vice versa.</div>`}
+]},
+{group:"10 Testing Steps",items:[
+{id:"step1",title:"Step 1: Understand the control",tag:"Step 1/10",tagColor:"#4f8ef7",content:`<p>Before requesting evidence:</p><ul style="list-style:none;display:flex;flex-direction:column;gap:8px;margin:10px 0">${["Read the full Control Description","Complete in one sentence: 'This control exists to ___ and reduces the risk of ___'","Identify: frequency, owner, and expected evidence"].map((s,i)=>`<li style="display:flex;gap:8px;align-items:flex-start"><span class="step-num">${i+1}</span><span style="font-size:13px;color:#c8ccd8;font-weight:300;padding-top:2px">${s}</span></li>`).join('')}</ul><div class="tip"><strong>Expected outcome:</strong> You already know what to request and what to validate before touching any evidence.</div>`},
+{id:"step2",title:"Step 2: Define the scope",tag:"Step 2/10",tagColor:"#4f8ef7",content:`<p>Define clearly:</p><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:10px 0"><div style="background:var(--s2);border:1px solid var(--b2);border-radius:6px;padding:10px;text-align:center"><div style="font-size:20px;font-weight:600;color:#4f8ef7">P</div><div style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.1em;margin-top:3px">PERIOD</div><div style="font-size:11px;color:var(--dim);margin-top:4px;font-weight:300">e.g. Q1 FY2026</div></div><div style="background:var(--s2);border:1px solid var(--b2);border-radius:6px;padding:10px;text-align:center"><div style="font-size:20px;font-weight:600;color:#34d399">P</div><div style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.1em;margin-top:3px">POPULATION</div><div style="font-size:11px;color:var(--dim);margin-top:4px;font-weight:300">All instances</div></div><div style="background:var(--s2);border:1px solid var(--b2);border-radius:6px;padding:10px;text-align:center"><div style="font-size:20px;font-weight:600;color:#fbbf24">S</div><div style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.1em;margin-top:3px">SAMPLE</div><div style="font-size:11px;color:var(--dim);margin-top:4px;font-weight:300">How many to test</div></div></div><div class="tip">If the control is annual and has only 1 instance, your sample will likely be 1.</div>`},
+{id:"step35",title:"Step 3–5: Obtain & validate evidence",tag:"Step 3-5/10",tagColor:"#4f8ef7",content:`<p><strong>Step 3 — Obtain evidence:</strong> request exactly what is stated in the Evidence section of the form.</p><p style="margin-top:10px"><strong>Step 4 — Validate the evidence:</strong> before testing, verify:</p><ul style="list-style:none;display:flex;flex-direction:column;gap:6px;margin:8px 0">${["Does the date match the period?","Does the report show parameters (date, system, scope)?","Does the evidence show who reviewed and when?"].map(s=>`<li style="display:flex;gap:8px;font-size:13px;color:#c8ccd8;font-weight:300"><span style="color:#fbbf24">✓</span>${s}</li>`).join('')}</ul><p style="margin-top:10px"><strong>Step 5 — Execute procedures (A, B, C...):</strong> one by one, document: evidence used + result (No exception / Exception / N/A).</p>`},
+{id:"step68",title:"Step 6–8: Exceptions & documentation",tag:"Step 6-8/10",tagColor:"#4f8ef7",content:`<p><strong>Step 6 — Evaluate exceptions:</strong> document what was missing, which procedure it affects, potential impact, and whether it is isolated or repeated.</p><div class="warn">If approval is missing or the control was not performed, it is usually more serious.</div><p style="margin-top:10px"><strong>Step 7 — Review remediation:</strong> Was it fixed? When? Is there evidence? Action plan?</p><p style="margin-top:10px"><strong>Step 8 — Document:</strong> your workpaper must include population/sample, evidence, results per procedure, and final conclusion.</p>`},
+{id:"step910",title:"Step 9–10: Conclusion & approval",tag:"Step 9-10/10",tagColor:"#4f8ef7",content:`<div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:12px"><div style="background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.25);border-radius:7px;padding:12px"><div style="font-family:var(--mono);font-size:9px;color:#34d399;letter-spacing:.1em;margin-bottom:5px">EFFECTIVE</div><p style="font-size:12px;color:#c8ccd8;font-weight:300;line-height:1.5">No material exceptions, or exceptions properly handled with remediation.</p></div><div style="background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.25);border-radius:7px;padding:12px"><div style="font-family:var(--mono);font-size:9px;color:#f87171;letter-spacing:.1em;margin-bottom:5px">INEFFECTIVE</div><p style="font-size:12px;color:#c8ccd8;font-weight:300;line-height:1.5">Repeated failures, missing evidence, not performed, missing approval.</p></div></div><p><strong>Step 10 — Review and approval:</strong> the reviewer validates your logic and evidence. A second reviewer (if applicable) confirms consistency.</p>`}
+]},
+{group:"Common Mistakes",items:[
+{id:"mistakes",title:"Common mistakes to avoid",tag:"Best Practice",tagColor:"#f87171",content:`<div style="display:flex;flex-direction:column;gap:10px">${[["Using a report without parameters","Request a screenshot/properties showing visible parameters"],["Evidence without date or author","Request an approval email or log with date"],["Confusing population with sample","Define the universe first, then select the sample"],["Not documenting an exception because it was fixed later","Document the exception AND then the remediation"],["Evidence outside the period","Verify dates before closing the workpaper"]].map(([m,f])=>`<div style="background:var(--s2);border:1px solid var(--b2);border-radius:7px;overflow:hidden"><div style="padding:8px 12px;background:var(--rdim);border-bottom:1px solid rgba(248,113,113,.15);font-size:12px;color:#f4b8b8;display:flex;gap:7px"><span style="flex-shrink:0">✕</span>${m}</div><div style="padding:8px 12px;font-size:12px;color:var(--dim);font-weight:300;display:flex;gap:7px"><span style="flex-shrink:0;color:#34d399">→</span>${f}</div></div>`).join('')}</div>`}
+]},
+{group:"Practical Examples",items:[
+{id:"ex1",title:"Example: IT_App_01.1",tag:"Example",tagColor:"#34d399",content:`<p>Control: <strong>Quarterly review of critical access</strong></p><div style="background:var(--s2);border:1px solid var(--b2);border-radius:8px;overflow:hidden;margin:10px 0"><table style="width:100%;border-collapse:collapse;font-size:12px"><tr><td style="padding:8px 11px;border-bottom:1px solid var(--b1);color:var(--muted);font-family:var(--mono);font-size:9px;letter-spacing:.1em;width:35%">PERIOD</td><td style="padding:8px 11px;border-bottom:1px solid var(--b1);color:#c8ccd8;font-weight:300">Q1 FY2026</td></tr><tr><td style="padding:8px 11px;border-bottom:1px solid var(--b1);color:var(--muted);font-family:var(--mono);font-size:9px;letter-spacing:.1em">POPULATION</td><td style="padding:8px 11px;border-bottom:1px solid var(--b1);color:#c8ccd8;font-weight:300">1 quarterly review</td></tr><tr><td style="padding:8px 11px;color:var(--muted);font-family:var(--mono);font-size:9px;letter-spacing:.1em">SAMPLE</td><td style="padding:8px 11px;color:#c8ccd8;font-weight:300">1 (the quarterly review)</td></tr></table></div><div style="display:flex;flex-direction:column;gap:5px;margin:10px 0">${[["A","Complete report with parameters","pass"],["B","Review performed within the quarter","pass"],["C","Exceptions properly documented","pass"],["D","Management approval evidenced","pass"],["E","Remediation completed on time","pass"]].map(([p,d,r])=>`<div style="display:flex;gap:8px;align-items:flex-start;font-size:12px"><span style="font-family:var(--mono);color:#4f8ef7;width:16px;flex-shrink:0">${p}:</span><span style="color:#c8ccd8;font-weight:300;flex:1">${d}</span><span style="font-family:var(--mono);font-size:10px;color:#34d399">PASS</span></div>`).join('')}</div><div style="background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.25);border-radius:6px;padding:10px 12px;font-family:var(--mono);font-size:10px;color:#34d399;letter-spacing:.05em">CONCLUSION: EFFECTIVE</div>`},
+{id:"ex2",title:"Example: IT_App_01.5",tag:"Example",tagColor:"#fbbf24",content:`<p>Control: <strong>Critical configuration changes</strong></p><div style="background:var(--s2);border:1px solid var(--b2);border-radius:8px;overflow:hidden;margin:10px 0"><table style="width:100%;border-collapse:collapse;font-size:12px"><tr><td style="padding:8px 11px;border-bottom:1px solid var(--b1);color:var(--muted);font-family:var(--mono);font-size:9px;letter-spacing:.1em;width:35%">PERIOD</td><td style="padding:8px 11px;border-bottom:1px solid var(--b1);color:#c8ccd8;font-weight:300">Q2 FY2026</td></tr><tr><td style="padding:8px 11px;border-bottom:1px solid var(--b1);color:var(--muted);font-family:var(--mono);font-size:9px;letter-spacing:.1em">POPULATION</td><td style="padding:8px 11px;border-bottom:1px solid var(--b1);color:#c8ccd8;font-weight:300">25 change tickets</td></tr><tr><td style="padding:8px 11px;color:var(--muted);font-family:var(--mono);font-size:9px;letter-spacing:.1em">SAMPLE</td><td style="padding:8px 11px;color:#c8ccd8;font-weight:300">5 selected tickets</td></tr></table></div><div style="display:flex;flex-direction:column;gap:5px;margin:10px 0">${[["A","Tickets with correct description and classification","pass"],["B","1 ticket missing prior approval","fail"],["C","Testing properly documented","pass"],["D","Implementation consistent with approval","pass"],["E","Closure documented","pass"]].map(([p,d,r])=>`<div style="display:flex;gap:8px;align-items:flex-start;font-size:12px"><span style="font-family:var(--mono);color:#4f8ef7;width:16px;flex-shrink:0">${p}:</span><span style="color:#c8ccd8;font-weight:300;flex:1">${d}</span><span style="font-family:var(--mono);font-size:10px;color:${r==='fail'?'#f87171':'#34d399'}">${r==='fail'?'EXCEPTION':'PASS'}</span></div>`).join('')}</div><div style="background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.25);border-radius:6px;padding:10px 12px;font-family:var(--mono);font-size:10px;color:#fbbf24;letter-spacing:.05em">CONCLUSION: EFFECTIVE WITH MINOR EXCEPTION</div>`},
+{id:"ex3",title:"Example: IT_App_01.7",tag:"Example",tagColor:"#f87171",content:`<p>Control: <strong>Access deprovisioning</strong></p><div style="background:var(--s2);border:1px solid var(--b2);border-radius:8px;overflow:hidden;margin:10px 0"><table style="width:100%;border-collapse:collapse;font-size:12px"><tr><td style="padding:8px 11px;border-bottom:1px solid var(--b1);color:var(--muted);font-family:var(--mono);font-size:9px;letter-spacing:.1em;width:35%">PERIOD</td><td style="padding:8px 11px;border-bottom:1px solid var(--b1);color:#c8ccd8;font-weight:300">Q1 FY2026</td></tr><tr><td style="padding:8px 11px;border-bottom:1px solid var(--b1);color:var(--muted);font-family:var(--mono);font-size:9px;letter-spacing:.1em">POPULATION</td><td style="padding:8px 11px;border-bottom:1px solid var(--b1);color:#c8ccd8;font-weight:300">12 employee terminations</td></tr><tr><td style="padding:8px 11px;color:var(--muted);font-family:var(--mono);font-size:9px;letter-spacing:.1em">SAMPLE</td><td style="padding:8px 11px;color:#c8ccd8;font-weight:300">5 terminations</td></tr></table></div><div style="display:flex;flex-direction:column;gap:5px;margin:10px 0">${[["A","Requests properly documented","pass"],["B","Tickets properly created","pass"],["C","2 cases removed outside the defined timeframe","fail"],["D","Tickets closed with evidence","pass"],["E","Activities monitored","pass"]].map(([p,d,r])=>`<div style="display:flex;gap:8px;align-items:flex-start;font-size:12px"><span style="font-family:var(--mono);color:#4f8ef7;width:16px;flex-shrink:0">${p}:</span><span style="color:#c8ccd8;font-weight:300;flex:1">${d}</span><span style="font-family:var(--mono);font-size:10px;color:${r==='fail'?'#f87171':'#34d399'}">${r==='fail'?'EXCEPTION':'PASS'}</span></div>`).join('')}</div><div style="background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.25);border-radius:6px;padding:10px 12px;font-family:var(--mono);font-size:10px;color:#f87171;letter-spacing:.05em">CONCLUSION: POTENTIALLY INEFFECTIVE</div>`}
+]}
+];
+
+// ─── IPE DATA ────────────────────────────────────────────────
+const IPE_STEPS=[
+{id:"why",title:"Why Validate IPE",color:"#a78bfa",content:`<div class="gc-title">Why IPE Validation Matters</div><div style="margin-bottom:10px;font-family:var(--mono);font-size:9px;padding:3px 8px;border-radius:3px;background:var(--pdim);border:1px solid rgba(167,139,250,.3);color:#a78bfa;display:inline-block;letter-spacing:.1em">FOUNDATION</div><div class="gc-body"><p>IPE = <strong>Information Produced by the Entity.</strong> Any report, export, listing, dashboard, log, or file the company generates and that you use as evidence to test a control.</p><div class="warn" style="margin:12px 0"><strong>Key risk:</strong> If the IPE is incorrect (incomplete, inaccurate, or generated with wrong parameters), your testing conclusion may be wrong — even if the control looks fine.</div><p>A reliable IPE must be:</p><ul class="ipe-check-list">${[["Reliable","Comes from a valid source and has not been inappropriately changed"],["Complete","Includes the full relevant population"],["Accurate","Data reflects the system of record"],["Period-appropriate","Dates/range match the period being tested"],["Reproducible","Someone else can re-run it with the same parameters and get the same result"]].map(([k,d])=>`<li class="ipe-check-item"><span class="ipe-check-ico">✓</span><div><strong>${k}</strong> — ${d}</div></li>`).join('')}</ul></div>`},
+{id:"when",title:"When It Is Required",color:"#a78bfa",content:`<div class="gc-title">When to Perform IPE Validation</div><div class="gc-body" style="margin-top:10px"><p>Perform IPE validation when your control testing depends on any of the following:</p><ul class="ipe-check-list">${[["System-generated reports","e.g., access, roles, privileged users"],["Exports (CSV/Excel) used as population or primary evidence",""],["Logs or dashboards","jobs, interfaces, alerts"],["Ticketing data extracted as population","e.g., changes, incidents"],["Business-maintained files","e.g., SoD matrix, access matrix"]].map(([k,d])=>`<li class="ipe-check-item"><span class="ipe-check-ico">✓</span><div>${k}${d?' <span style="color:var(--muted);font-size:11px">— '+d+'</span>':''}</div></li>`).join('')}</ul><div class="tip"><strong>Practical signal:</strong> if your form says "Obtain the report… validate it includes all relevant users/groups… verify parameters…", that is IPE validation.</div></div>`},
+{id:"types",title:"IPE Types (A/B/C)",color:"#22d3ee",content:`<div class="gc-title">IPE Types</div><div class="gc-body" style="margin-top:10px"><p>Classifying the IPE changes how you test it:</p><div class="ipe-type-grid"><div class="ipe-type-card" style="border-color:rgba(52,211,153,.3)"><div class="ipe-type-label" style="color:#34d399">Type A</div><div style="font-size:11px;color:#34d399;margin-bottom:6px;font-family:var(--mono)">System-generated</div><div class="ipe-type-desc">Lower manipulation risk. You must still validate parameters and scope.</div></div><div class="ipe-type-card" style="border-color:rgba(251,191,36,.3)"><div class="ipe-type-label" style="color:#fbbf24">Type B</div><div style="font-size:11px;color:#fbbf24;margin-bottom:6px;font-family:var(--mono)">Export + manual manipulation</div><div class="ipe-type-desc">Higher risk. Document transformations and validate the file was not incorrectly altered.</div></div><div class="ipe-type-card" style="border-color:rgba(248,113,113,.3)"><div class="ipe-type-label" style="color:#f87171">Type C</div><div style="font-size:11px;color:#f87171;margin-bottom:6px;font-family:var(--mono)">Business-maintained</div><div class="ipe-type-desc">Higher human error risk. Validate approvals, version control, and change history.</div></div></div></div>`},
+{id:"generate",title:"Step 3: How It Is Generated",color:"#a78bfa",content:`<div class="gc-title">Step 3 — Document How the IPE Is Generated</div><div class="gc-body" style="margin-top:10px"><p>Include the system name, navigation path, and filters/queries. Detailed enough for someone else to re-run it.</p><div class="example">System: ServiceNow | Path: Reports → View/Run → "Change Tickets – Critical Config" | Filters: Date 01-Apr-2026 to 30-Jun-2026; Priority High/Critical; Environment Production | Output: Export to Excel</div><div class="tip">Retain a screenshot showing the parameters/filters and the run timestamp.</div></div>`},
+{id:"params",title:"Step 4: Validate Parameters",color:"#f87171",content:`<div class="gc-title">Step 4 — Validate Parameters (the #1 reason IPE fails)</div><div class="gc-body" style="margin-top:10px"><p>Before testing completeness/accuracy, confirm:</p><ul class="ipe-check-list">${["Is the period correct (start/end dates or 'as of' date)?","Is the scope correct (system, environment, business unit)?","Are the right statuses included (Active/Closed/Implemented...)?","Does it include the full relevant population (all critical groups, all terminations...)?"].map(q=>`<li class="ipe-check-item"><span class="ipe-check-ico" style="color:#fbbf24">!</span>${q}</li>`).join('')}</ul><div class="warn">If parameters are incorrect, the IPE is not reliable — even if the data looks right.</div></div>`},
+{id:"complete",title:"Step 5: Completeness",color:"#34d399",content:`<div class="gc-title">Step 5 — Test Completeness</div><div class="gc-body" style="margin-top:10px"><p>Objective: Does the report include everything it should?</p><p style="margin-top:8px">Simple methods:</p><ul class="ipe-check-list">${[["Reconcile to an independent total","e.g., compare report count to a system summary screen"],["Tie-out to another source","e.g., HR terminations list vs. deprovisioning tickets"],["Re-run the report","re-run it and confirm the output matches"]].map(([m,d])=>`<li class="ipe-check-item"><span class="ipe-check-ico">✓</span><div><strong>${m}</strong> — <span style="color:var(--muted)">${d}</span></div></li>`).join('')}</ul><div class="example">Expected outcome: "No relevant records are missing from the population."</div></div>`},
+{id:"accuracy",title:"Step 6: Accuracy",color:"#22d3ee",content:`<div class="gc-title">Step 6 — Test Accuracy</div><div class="gc-body" style="margin-top:10px"><p>Objective: Are the data values correct?</p><p style="margin-top:8px">Typical approaches:</p><ul class="ipe-check-list">${[["Sample-based vouching","pick 5–10 records and verify each one directly in the system of record"],["Validate key fields","confirm that UserID/Role/Group/Date/Status match the source"],["If Excel was used","check for calculated fields, filters, or manual edits that could change the population"]].map(([m,d])=>`<li class="ipe-check-item"><span class="ipe-check-ico">✓</span><div><strong>${m}</strong> — ${d}</div></li>`).join('')}</ul><div style="margin:12px 0"><p style="margin-bottom:8px"><strong>Example of validated sample (IT_App_01.1):</strong></p><table class="ipe-table"><thead><tr><th>#</th><th>User ID</th><th>Critical Group</th><th>Verified in App</th><th>Result</th></tr></thead><tbody>${[["1","U10293","APP_SYS_ADMIN"],["2","U11874","APP_GL_POSTING"],["3","U13011","APP_FIN_AP_APPROVER"],["4","U14109","APP_IT_SUPPORT_PRIV"],["5","U15555","APP_FIN_AP_CLERK"]].map(([n,u,g])=>`<tr><td>${n}</td><td style="font-family:var(--mono)">${u}</td><td style="font-family:var(--mono);font-size:10px">${g}</td><td><span class="pass">Matches</span></td><td><span class="pass">PASS</span></td></tr>`).join('')}</tbody></table></div></div>`},
+{id:"integrity",title:"Step 7: Integrity",color:"#f87171",content:`<div class="gc-title">Step 7 — Evaluate Integrity / Risk of Manipulation</div><div class="gc-body" style="margin-top:10px"><p>Key questions to document:</p><ul class="ipe-check-list">${["Who can generate the report?","Who can edit the export (Excel/CSV)?","Is there a risk of changes before you receive it?","Does it come directly from the system or through manual handling?"].map(q=>`<li class="ipe-check-item"><span class="ipe-check-ico" style="color:#f87171">?</span>${q}</li>`).join('')}</ul><div class="tip"><strong>Helpful mitigations:</strong> direct system exports · run-history screenshots · restricted access to report builders · system logs.</div></div>`},
+{id:"conclude",title:"Step 8: Conclusion",color:"#34d399",content:`<div class="gc-title">Step 8 — Conclude Whether the IPE Is Reliable</div><div class="gc-body" style="margin-top:10px"><div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:14px"><div style="background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.25);border-radius:7px;padding:12px"><div style="font-family:var(--mono);font-size:9px;color:#34d399;letter-spacing:.1em;margin-bottom:6px">IPE RELIABLE</div><p style="font-size:12px;color:#c8ccd8;font-weight:300;line-height:1.5">Correct parameters + completeness validated + accuracy validated (and integrity concerns addressed).</p></div><div style="background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.25);border-radius:7px;padding:12px"><div style="font-family:var(--mono);font-size:9px;color:#f87171;letter-spacing:.1em;margin-bottom:6px">IPE NOT RELIABLE</div><p style="font-size:12px;color:#c8ccd8;font-weight:300;line-height:1.5">Incorrect parameters, missing tie-out, insufficient evidence, or unresolved integrity concerns.</p></div></div><div class="warn"><strong>Important:</strong> If the IPE is not reliable, your control testing is impacted and you may need additional procedures or alternative evidence.</div></div>`},
+{id:"template",title:"IPE Template",color:"#fbbf24",content:`<div class="gc-title">IPE Documentation Template</div><div class="gc-body" style="margin-top:10px"><p>Use this template in your workpaper:</p><div style="background:var(--s2);border:1px solid var(--b2);border-radius:8px;overflow:hidden;margin-top:12px">${[["IPE Name","e.g., Privileged Access Listing – AD"],["Control / Procedure Supported","e.g., IT_App_01.1 – Procedure A"],["System Source","App / AD / ServiceNow / Jira..."],["Report Owner / Generator","Who generates or maintains it"],["How Generated","Steps / path / query"],["Parameters","Date, scope, status, groups"],["Key Fields Used","UserID, Role, Ticket#, Status, Date"],["Population Definition","Description of the included universe"],["Completeness Testing","Method used + result"],["Accuracy Testing","Method used + result"],["Integrity Considerations","Identified risks + mitigations"],["Evidence Retained","Files / screenshots / links"],["Conclusion","Reliable / Not Reliable"],["Tester / Date","Name and date"]].map(([k,v])=>`<div style="display:grid;grid-template-columns:200px 1fr;border-bottom:1px solid var(--b1);"><div style="padding:8px 12px;font-family:var(--mono);font-size:9px;letter-spacing:.08em;color:var(--muted);background:var(--s1);text-transform:uppercase">${k}</div><div style="padding:8px 12px;font-size:11px;color:var(--dim);font-weight:300">${v}</div></div>`).join('')}</div></div>`}
+];
+
+// ─── VIEW SWITCHING ──────────────────────────────────────────
+function showView(id, btn) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-' + id).classList.add('active');
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+}
+
+// Nav tabs
+document.querySelectorAll('.nav-tab').forEach(function(tab) {
+  tab.addEventListener('click', function() { showView(tab.dataset.view, tab); });
+});
+
+// Doc cards on dashboard
+document.querySelectorAll('.doc-card[data-goto]').forEach(function(card) {
+  card.addEventListener('click', function() {
+    var target = card.dataset.goto;
+    var tab = document.querySelector('.nav-tab[data-view="' + target + '"]');
+    showView(target, tab);
+  });
+});
+
+// ─── CONTROL EXPLORER ────────────────────────────────────────
+var aFreq = 'all', aId = null, sVal = '';
+
+function filtControls() {
+  return CONTROLS.filter(function(c) {
+    var fOk = aFreq === 'all' || c.freq === aFreq;
+    var q = sVal.toLowerCase();
+    var sOk = !q || c.id.toLowerCase().includes(q) || c.name.toLowerCase().includes(q) || c.description.toLowerCase().includes(q);
+    return fOk && sOk;
+  });
+}
+
+function renderCtrlList() {
+  var list = filtControls();
+  document.getElementById('list-count').textContent = list.length + ' control' + (list.length !== 1 ? 's' : '');
+  var el = document.getElementById('ctrl-list');
+  if (!list.length) { el.innerHTML = '<div class="no-res">No controls found</div>'; return; }
+  el.innerHTML = list.map(function(c) {
+    return '<div class="ctrl-item' + (c.id === aId ? ' active' : '') + '" data-id="' + c.id + '">' +
+      '<div class="ci-id">' + c.id + '</div>' +
+      '<div class="ci-name">' + c.name + '</div>' +
+      '<div class="ci-badges"><span class="badge ' + FC[c.freq] + '">' + c.freq + '</span><span class="badge bt">' + c.type + '</span></div>' +
+      '</div>';
+  }).join('');
+  el.querySelectorAll('.ctrl-item').forEach(function(e) {
+    e.addEventListener('click', function() { aId = e.dataset.id; renderCtrlList(); renderCtrlDetail(); });
+  });
+}
+
+function renderCtrlDetail() {
+  var el = document.getElementById('ctrl-detail');
+  if (!aId) return;
+  var c = CONTROLS.find(function(x) { return x.id === aId; });
+  if (!c) return;
+  el.innerHTML =
+    '<div class="d-hdr">' +
+      '<div class="d-id">' + c.id + '</div>' +
+      '<div class="d-title">' + c.name + '</div>' +
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0"><span class="badge ' + FC[c.freq] + '">' + c.freq + '</span><span class="badge bt">' + c.type + '</span></div>' +
+      '<div class="d-meta">' +
+        '<div class="mi"><span class="mk">Owner</span><span class="mv">' + c.owner + '</span></div>' +
+        '<div class="mi"><span class="mk">Evidence</span><span class="mv">' + c.evidence.length + ' items</span></div>' +
+        '<div class="mi"><span class="mk">References</span><span class="mv">' + c.norms.length + ' frameworks</span></div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="secs">' +
+      '<div class="sc scf"><div class="sh risk"><span class="dot"></span>Associated Risk (WCGW)</div><div class="sb"><div class="risk-box"><span class="risk-lbl">What Could Go Wrong?</span>' + c.risk + '</div><div class="norm-row">' + c.norms.map(function(n){return '<span class="nbadge">'+n+'</span>';}).join('') + '</div></div></div>' +
+      '<div class="sc scf"><div class="sh desc"><span class="dot"></span>Control Description</div><div class="sb"><p>' + c.description + '</p></div></div>' +
+      '<div class="sc"><div class="sh ev"><span class="dot"></span>Required Evidence</div><div class="sb"><ul class="ev-list">' + c.evidence.map(function(e,i){return '<li class="ev-item"><span class="en g">'+(i+1)+'</span>'+e+'</li>';}).join('') + '</ul></div></div>' +
+      '<div class="sc"><div class="sh res"><span class="dot"></span>Expected Result</div><div class="sb"><ul class="ev-list">' + c.result.map(function(r,i){return '<li class="ev-item"><span class="en a">'+(i+1)+'</span>'+r+'</li>';}).join('') + '</ul></div></div>' +
+    '</div>';
+}
+
+document.querySelectorAll('.fbtn').forEach(function(b) {
+  b.addEventListener('click', function() {
+    document.querySelectorAll('.fbtn').forEach(function(x) { x.classList.remove('active'); });
+    b.classList.add('active');
+    aFreq = b.dataset.freq;
+    renderCtrlList();
+  });
+});
+document.getElementById('ctrl-search').addEventListener('input', function(e) { sVal = e.target.value; renderCtrlList(); });
+renderCtrlList();
+
+// ─── TESTING GUIDE ────────────────────────────────────────────
+function buildGuideNav() {
+  var nav = document.getElementById('guide-nav');
+  nav.innerHTML = GUIDE_SECTIONS.map(function(sec) {
+    return '<div class="guide-sec-hd">' + sec.group + '</div>' +
+      sec.items.map(function(it) { return '<div class="guide-item" data-gid="' + it.id + '">' + it.title + '</div>'; }).join('');
+  }).join('');
+  nav.querySelectorAll('.guide-item').forEach(function(el) {
+    el.addEventListener('click', function() {
+      nav.querySelectorAll('.guide-item').forEach(function(x) { x.classList.remove('active'); });
+      el.classList.add('active');
+      showGuide(el.dataset.gid);
+    });
+  });
+}
+
+function showGuide(id) {
+  for (var i = 0; i < GUIDE_SECTIONS.length; i++) {
+    var it = GUIDE_SECTIONS[i].items.find(function(x) { return x.id === id; });
+    if (it) {
+      document.getElementById('guide-content').innerHTML =
+        '<div class="gc-title">' + it.title + '</div>' +
+        '<div style="margin-bottom:12px"><span class="gc-tag" style="background:' + it.tagColor + '22;border:1px solid ' + it.tagColor + '44;color:' + it.tagColor + '">' + it.tag + '</span></div>' +
+        '<div class="gc-body">' + it.content + '</div>';
+      break;
+    }
+  }
+}
+
+buildGuideNav();
+var firstGuide = document.querySelector('.guide-item');
+if (firstGuide) { firstGuide.classList.add('active'); showGuide(firstGuide.dataset.gid); }
+
+// ─── IPE GUIDE ────────────────────────────────────────────────
+function buildIpeNav() {
+  var nav = document.getElementById('ipe-nav');
+  nav.innerHTML = IPE_STEPS.map(function(s, i) {
+    return '<div class="ipe-step-item" data-iid="' + s.id + '">' +
+      '<span class="ipe-snum" style="background:' + s.color + '22;color:' + s.color + ';border:1px solid ' + s.color + '44">' + (i+1) + '</span>' +
+      '<span class="ipe-stitle">' + s.title + '</span>' +
+      '</div>';
+  }).join('');
+  nav.querySelectorAll('.ipe-step-item').forEach(function(el) {
+    el.addEventListener('click', function() {
+      nav.querySelectorAll('.ipe-step-item').forEach(function(x) { x.classList.remove('active'); });
+      el.classList.add('active');
+      showIpe(el.dataset.iid);
+    });
+  });
+}
+
+function showIpe(id) {
+  var step = IPE_STEPS.find(function(x) { return x.id === id; });
+  if (step) document.getElementById('ipe-content').innerHTML = step.content;
+}
+
+buildIpeNav();
+var firstIpe = document.querySelector('.ipe-step-item');
+if (firstIpe) { firstIpe.classList.add('active'); showIpe(firstIpe.dataset.iid); }
+
+}); // end DOMContentLoaded
+</script>
 </body>
 </html>
