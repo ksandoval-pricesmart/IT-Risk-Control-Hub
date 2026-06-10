@@ -438,7 +438,7 @@ function renderCtrlList(){
   el.innerHTML=list.map(function(c){
     var fc=FC[c.frequency]||'bt';
     return '<div class="ctrl-item'+(c.num===aId?' active':'')+'" data-num="'+c.num+'">' +
-      '<div class="ci-id">Control '+c.num+'/12</div>' +
+      '<div class="ci-id">IT_APP_01.'+c.num+'</div>' +
       '<div class="ci-name">'+c.name+'</div>' +
       '<div class="ci-badges"><span class="badge '+fc+'">'+c.frequency+'</span><span class="badge bt">'+c.itgcArea+'</span><span class="badge bt">'+c.systemCount+' systems</span></div>' +
       '</div>';
@@ -484,7 +484,7 @@ function renderCtrlDetail(){
   var fc=FC[c.frequency]||'bt';
   el.innerHTML=
     '<div class="d-hdr">' +
-      '<div class="d-id">Control '+c.num+' / 12</div>' +
+      '<div class="d-id">IT_APP_01.'+c.num+'</div>' +
       '<div class="d-title">'+c.name+'</div>' +
       '<div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0">' +
         '<span class="badge '+fc+'">'+c.frequency+'</span>' +
